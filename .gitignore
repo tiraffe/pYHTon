@@ -1,0 +1,3 @@
+*.yy.c
+bin/
+.vscode/
