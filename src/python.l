@@ -23,18 +23,18 @@ void process_indent(char* line);
 
 %}
 
-PUNCT [-+*/=<>:^&|%!]*
 ID  [A-Za-z_][A-Za-z0-9_]*
 INT [0-9]+
 STRING \"([^\\\"]|\\.|\\\n)*\"
 KEYWORD False|await|else|import|pass|None|break|except|in|raise|True|class|finally|is|return|and|continue|for|lambda|try|as|def|from|nonlocal|while|assert|del|global|not|with|async|elif|if|or|yield
+OPERATOR \+|\-|\*|\*\*|\/|\/\/|%|@|<<|>>|&|\||\^|~|<=|>=|==|!=|<|>
+DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^=|>>=|<<=|\*\*=
 
-%option noyywrap
+%option noyywrap yylineno
 %x INSTRING INCOMMENT
 
 %%
-
-{PUNCT} {PUNCT;}
+{OPERATOR}|{DELIMITERS} {PUNCT;}
 {KEYWORD} {KEYWORD;}
 {STRING}|{INT} {LIT;}
 {ID} {ID;}
@@ -55,7 +55,7 @@ KEYWORD False|await|else|import|pass|None|break|except|in|raise|True|class|final
 
 [ \t\r]   {/* Ignore blank */}
 
-. {ECHO;}
+. {printf("[line:%d] Unknown token: ", yylineno); ECHO; putchar('\n');}
 <<EOF>>  { process_indent(""); printf("(ENDMARKER)"); return 0; }
 
 
