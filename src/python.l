@@ -11,6 +11,7 @@ unsigned int level = 0;
 
 unsigned int first = 1;
 
+void escaped_print(char* str);
 void process_indent(char* line);
 
 #define NEWLINE {printf("(NEWLINE)\n");}
@@ -24,20 +25,15 @@ void process_indent(char* line);
 %}
 
 ID  [A-Za-z_][A-Za-z0-9_]*
-INT [0-9]+
-STRING \"([^\\\"]|\\.|\\\n)*\"
+NUMBER [0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?[Jj]?
+SHORT_STRING (\"([^\\\"]|\\.|\\\n)*\")|(\'([^\\\']|\\.|\\\n)*\')
 KEYWORD False|await|else|import|pass|None|break|except|in|raise|True|class|finally|is|return|and|continue|for|lambda|try|as|def|from|nonlocal|while|assert|del|global|not|with|async|elif|if|or|yield
 OPERATOR \+|\-|\*|\*\*|\/|\/\/|%|@|<<|>>|&|\||\^|~|<=|>=|==|!=|<|>
 DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^=|>>=|<<=|\*\*=
 
 %option noyywrap yylineno
-%x INSTRING INCOMMENT
 
 %%
-{OPERATOR}|{DELIMITERS} {PUNCT;}
-{KEYWORD} {KEYWORD;}
-{STRING}|{INT} {LIT;}
-{ID} {ID;}
 
 [ ]*#.*\n     {/* Ignore comments. */}
 ^[ ]*\n       {/* Ignore blank lines. */}
@@ -53,6 +49,13 @@ DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^
 "("  {PUNCT; nesting++; }
 ")"  {PUNCT; nesting--; }
 
+
+{SHORT_STRING} {printf("(LIT \""); escaped_print(yytext); printf("\")\n");}
+{NUMBER} {LIT;}
+{OPERATOR}|{DELIMITERS} {PUNCT;}
+{KEYWORD} {KEYWORD;}
+{ID} {ID;}
+
 [ \t\r]   {/* Ignore blank */}
 
 . {printf("[line:%d] Unknown token: ", yylineno); ECHO; putchar('\n');}
@@ -60,6 +63,23 @@ DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^
 
 
 %%
+
+void escaped_print(char* str) {
+  int in_backslash = 0;
+  int last = yyleng - 1, i = 1;
+  while(i < last) {
+    if (in_backslash) {
+      if (str[i] != '\n') printf("\\%c", str[i]);
+    } else if (str[i] == '\"') {
+      printf("\\\"");
+    } else if (str[i] != '\\') {
+      putchar(str[i]);
+    }
+
+    in_backslash = (str[i] == '\\') ? 1 : 0;
+    i++;
+  }
+}
 
 unsigned int white_count(char* line) {
   unsigned int count = 0;
@@ -76,7 +96,6 @@ void process_indent(char* line) {
   unsigned int indent = white_count(line);
 
   if (indent == indent_stack[level]) {
-    // if (!first) printf(";");
     first = 0;
     return;
   }
