@@ -11,7 +11,8 @@ unsigned int level = 0;
 
 unsigned int first = 1;
 
-void escaped_print(char* str);
+void print_number(char* str);
+void print_escaped_string(char* str);
 void process_indent(char* line);
 
 #define NEWLINE {printf("(NEWLINE)\n");}
@@ -25,7 +26,8 @@ void process_indent(char* line);
 %}
 
 ID  [A-Za-z_][A-Za-z0-9_]*
-NUMBER [0-9]*(\.[0-9]+)?([eE][+-]?[0-9]+)?[Jj]?
+FLOAT ([0-9]+\.)|(([0-9]*[.])?[0-9]+([eE][+-]?[0-9]+)?)
+NUMBER {FLOAT}[Jj]?
 SHORT_STRING (\"([^\\\"]|\\.|\\\n)*\")|(\'([^\\\']|\\.|\\\n)*\')
 KEYWORD False|await|else|import|pass|None|break|except|in|raise|True|class|finally|is|return|and|continue|for|lambda|try|as|def|from|nonlocal|while|assert|del|global|not|with|async|elif|if|or|yield
 OPERATOR \+|\-|\*|\*\*|\/|\/\/|%|@|<<|>>|&|\||\^|~|<=|>=|==|!=|<|>
@@ -50,8 +52,8 @@ DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^
 ")"  {PUNCT; nesting--; }
 
 
-{SHORT_STRING} {printf("(LIT \""); escaped_print(yytext); printf("\")\n");}
-{NUMBER} {LIT;}
+{SHORT_STRING} {printf("(LIT \""); print_escaped_string(yytext); printf("\")\n");}
+{NUMBER} {printf("(LIT "); print_number(yytext); printf(")\n");}
 {OPERATOR}|{DELIMITERS} {PUNCT;}
 {KEYWORD} {KEYWORD;}
 {ID} {ID;}
@@ -64,7 +66,16 @@ DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^
 
 %%
 
-void escaped_print(char* str) {
+void print_number(char* str) {
+  if (str[yyleng - 1] == 'j' || str[yyleng - 1] == 'J') {
+    str[yyleng - 1] = 'i';
+    printf("+%s", str);
+  } else {
+    printf("%s", str);
+  }
+}
+
+void print_escaped_string(char* str) {
   int in_backslash = 0;
   int last = yyleng - 1, i = 1;
   while(i < last) {
