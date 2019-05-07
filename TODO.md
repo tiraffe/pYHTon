@@ -11,4 +11,4 @@ Todo list
 
 ## Parser
 
-- [ ] TBD
+- [ ] Add Operator Token.
