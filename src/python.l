@@ -60,7 +60,7 @@ DELIMITERS \(|\)|\[|\]|\{|\}|,|:|\.|;|@|=|->|\+=|-=|\*=|\/=|\/\/=|%=|@=|&=|\|=|^
 
 [ \t\r]   {/* Ignore blank */}
 
-. {printf("[line:%d] Unknown token: ", yylineno); ECHO; putchar('\n');}
+. {printf("[line:%d] Unknown token: ", yylineno); ECHO; putchar('\n'); exit(-1);}
 <<EOF>>  { process_indent(""); printf("(ENDMARKER)"); return 0; }
 
 
