@@ -1,11 +1,11 @@
-bin/yacc: src/python.tab.c bin/lexer
-	gcc -o bin/yacc src/python.tab.c
+bin/yacc: src/python.tab.cpp bin/lexer
+	g++ -o bin/yacc src/python.tab.cpp
 
-src/python.tab.c: src/python.y
-	yacc -o src/python.tab.c src/python.y
+src/python.tab.cpp: src/python.y
+	yacc -o src/python.tab.cpp src/python.y
 
 bin/lexer: src/lex.yy.c
-	gcc -o bin/lexer src/lex.yy.c
+	g++ -o bin/lexer src/lex.yy.c
 
 src/lex.yy.c: src/python.l
 	lex -o src/lex.yy.c src/python.l

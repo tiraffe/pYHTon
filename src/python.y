@@ -3,12 +3,19 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string>
+#include <iostream>
+
 int yylex (void);
 void yyerror (char const *);
-#define YYSTYPE char*
+#define YYSTYPE std::string
+
+#define ECHO std::cout << yyval << std::endl
 
 struct Token {
-  char* value;
+  std::string value;
   int type;
 };
 
@@ -94,32 +101,79 @@ struct Token OP[] = {
 
 %%
 
-program: lines ENDMARKER;
-lines: import_stmt NEWLINE | lines import_stmt NEWLINE 
+program: lines ENDMARKER ;
+lines: import_stmt NEWLINE | lines import_stmt NEWLINE ;
 
 import_stmt
-  : import_name { printf("import_name\n"); }
-  | import_from { printf("import_from\n"); }
+  : import_name {ECHO;}
+  | import_from {ECHO;}
   ; 
 
-import_name: IMPORT dotted_as_names ;
-dotted_as_names: dotted_as_name | dotted_as_names ',' dotted_as_name ;
-dotted_name: NAME | dotted_name '.' NAME ;
-dotted_as_name: dotted_name | dotted_name AS NAME ;
+import_name
+  : IMPORT dotted_as_names  {$$ = "(Import " + $2 + ")";}
+  ;
 
-dot_puls: '.' | dot_puls '.' ; 
-dot_star: /* empty */ | dot_puls ;
+dotted_as_names
+  : dotted_as_name                      {$$ = $1;}
+  | dotted_as_names ',' dotted_as_name  {$$ = $1 + " " + $3;}
+  ;
 
-import_as_name: NAME | NAME AS NAME ;
-import_as_names: import_as_name | import_as_names ',' import_as_name ;
-import_in_from: IMPORT '*' | IMPORT '(' import_as_names ')' | IMPORT import_as_names ;
-import_from: FROM dot_star dotted_name import_in_from | dot_puls import_in_from ;
+dotted_name
+  : NAME                    {$$ = $1;}
+  | dotted_name '.' NAME    {$$ = $1 + $2 + $3; }
+  ;
+
+dotted_as_name
+  : dotted_name             {$$ = "[" + $1 + " #f]";}          
+  | dotted_name AS NAME     {$$ = "[" + $1 + " " + $3 + "]";}
+  ;
+
+dot_puls
+  : '.'           {$$ = $1; } 
+  | dot_puls '.'  {$$ = $1 + $2; } 
+  ; 
+
+dot_star
+  : /* empty */   {$$ = ""; } 
+  | dot_puls      {$$ = $1; } 
+  ;
+
+import_as_name
+  : NAME          {$$ = "[" + $1 + " #f]"; }
+  | NAME AS NAME  {$$ = "[" + $1 + " " + $3 + "]"; }
+  ;
+
+import_as_names
+  : import_as_name                      {$$ = $1; }
+  | import_as_names ',' import_as_name  {$$ = $1 + " " + $3; }
+  ;
+
+import_after_from
+  : IMPORT '*'                      {$$ = "(names [* #f])";}
+  | IMPORT '(' import_as_names ')'  {$$ = "(names " + $3 + ")";}
+  | IMPORT import_as_names          {$$ = "(names " + $2 + ")";}
+  ;
+
+import_from
+  : FROM dot_star dotted_name import_after_from {
+    $$ = "(ImportFrom"; 
+    $$ += " (module " + $3 + ")";
+    $$ += " " + $4;
+    $$ += " (level " + std::to_string($2.size()) + ")";
+    $$ += ")";
+  }
+  | FROM dot_puls import_after_from {
+    $$ = "(ImportFrom"; 
+    $$ += " (module #f)";
+    $$ += " " + $3;
+    $$ += " (level " + std::to_string($2.size()) + ")";
+    $$ += ")";
+  }
+  ;
 
 // comp_op: '<' | '>' | EQ_OP | NE_OP | LE_OP | GE_OP | IN | NOT IN | IS | IS NOT ;
 
 %%
-#include <stdio.h>
-#include <ctype.h>
 
 void
 yyerror (char const *s)
@@ -130,77 +184,72 @@ yyerror (char const *s)
 int
 yylex (void)
 {
-  int c;
-  char type[20], str[1024];
+  std::string type, str;
+  std::cin >> type;
 
-  if (scanf("%s", type) == EOF) {
+  if (std::cin.eof()) {
     return 0;
   }
 
-  if (strcmp(type, "(NEWLINE)") == 0) {
+  if (type == "(NEWLINE)") {
     return NEWLINE;
-  } else if (strcmp(type, "(INDENT)") == 0) {
+  } else if (type == "(INDENT)") {
     return INDENT;
-  } else if (strcmp(type, "(DEDENT)") == 0) {
+  } else if (type == "(DEDENT)") {
     return DEDENT;
-  } else if (strcmp(type, "(ENDMARKER)") == 0) {
+  } else if (type == "(ENDMARKER)") {
     return ENDMARKER;
-  } else if (strcmp(type, "(LIT") == 0) {
-    scanf("%s", str);
-    str[strlen(str) - 1] = '\0'; // remove ')' from end.
-    yylval = strdup(str);
+  } else if (type == "(LIT") {
+    std::cin >> str;
+    yylval = str.substr(0, str.size() - 1);
 
     if (str[0] == '\"') {
       return STRING;
     } else {
       return NUMBER;
     }
-  } else if (strcmp(type, "(ID") == 0) {
-    scanf("%s", str);
-    str[strlen(str) - 2] = '\0'; // remove '")' from end.
-    yylval = strdup(str + 1);
+  } else if (type == "(ID") {
+    std::cin >> str;
+    yylval = str.substr(1, str.size() - 3);
+
     return NAME;
-  } else if (strcmp(type, "(KEYWORD") == 0) {
-    scanf("%s", str);
-    str[strlen(str) - 1] = '\0'; // remove ')' from end.
-    yylval = strdup(str);
+  } else if (type == "(KEYWORD") {
+    std::cin >> str;
+    yylval = str.substr(0, str.size() - 1);
 
     int length = sizeof(KEYWORD) / sizeof(KEYWORD[0]);
     for (int i = 0; i < length; i++) {
-      if (strcmp(str, KEYWORD[i].value) == 0) {
+      if (yylval == KEYWORD[i].value) {
         return KEYWORD[i].type;
       }
     }
-  } else if (strcmp(type, "(PUNCT") == 0) {
-    scanf("%s", str);
-    str[strlen(str) - 2] = '\0'; // remove '")' from end.
-    yylval = strdup(str + 1);
-    
-    if (strlen(yylval) == 1) {
+  } else if (type == "(PUNCT") {
+    std::cin >> str;
+    yylval = str.substr(1, str.size() - 3);
+
+    if (yylval.size() == 1) {
       // single-char operator
       return yylval[0];
     } else {
       // multi-char operator
       int length = sizeof(OP) / sizeof(OP[0]);
       for (int i = 0; i < length; i++) {
-        if (strcmp(yylval, OP[i].value) == 0) {
+        if (yylval == OP[i].value) {
           return OP[i].type;
         }
       }
     }
   } else {
-    printf("UNKNOWN TYPE: %s\n", type);
+    std::cout << "UNKNOWN TYPE: " << type << ", " << str << std::endl;
     return -1;
   }
   
-  printf("ERROR TOKEN: (%s, %s)\n", type + 1, str);
+  std::cout << "ERROR TOKEN: " << type << ", " << str << std::endl;
   return -1;
 }
 
 int
 main (void)
 {
-  yyparse ();
-  puts("DONE.");
-  return 0;
+  return yyparse ();
 }
