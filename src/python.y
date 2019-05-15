@@ -8,7 +8,7 @@
 #include <string>
 #include <iostream>
 
-int yylex (void);
+int yylex();
 void yyerror (char const *);
 #define YYSTYPE std::string
 
@@ -175,15 +175,11 @@ import_from
 
 %%
 
-void
-yyerror (char const *s)
-{
+void yyerror (char const *s) {
   fprintf (stderr, "%s\n", s);
 }
 
-int
-yylex (void)
-{
+int yylex() {
   std::string type, str;
   std::cin >> type;
 
@@ -248,8 +244,6 @@ yylex (void)
   return -1;
 }
 
-int
-main (void)
-{
+int main() {
   return yyparse ();
 }
