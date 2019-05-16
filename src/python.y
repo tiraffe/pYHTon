@@ -102,7 +102,16 @@ struct Token OP[] = {
 %%
 
 program: lines ENDMARKER ;
-lines: import_stmt NEWLINE | lines import_stmt NEWLINE ;
+
+lines
+  : line NEWLINE        {ECHO;}
+  | lines line NEWLINE  {ECHO;}
+  ;
+
+line
+  : import_stmt 
+  | test 
+  ;
 
 import_stmt
   : import_name {ECHO;}
@@ -171,7 +180,249 @@ import_from
   }
   ;
 
-// comp_op: '<' | '>' | EQ_OP | NE_OP | LE_OP | GE_OP | IN | NOT IN | IS | IS NOT ;
+test
+  : or_test 
+  | or_test IF or_test ELSE test 
+  | lambdef
+  ;
+
+test_nocond
+  : or_test 
+  | lambdef_nocond
+  ;
+
+lambdef
+  : LAMBDA varargslist ':' test
+  | LAMBDA ':' test
+  ;
+
+lambdef_nocond
+  : LAMBDA varargslist ':' test_nocond
+  | LAMBDA ':' test_nocond
+  ;
+
+or_test
+  : and_test
+  | or_test OR and_test
+  ;
+
+and_test
+  : not_test 
+  | and_test AND not_test
+  ;
+
+not_test
+  : NOT not_test 
+  | comparison
+  ;
+
+comparison
+  : expr 
+  | comparison comp_op expr
+  ;
+
+comp_op: '<' | '>' | EQ_OP | NE_OP | LE_OP | GE_OP | IN | NOT IN | IS | IS NOT ;
+
+star_expr
+  : '*' expr
+  ;
+
+expr
+  : xor_expr 
+  | expr '|' xor_expr
+  ;
+
+xor_expr
+  : and_expr 
+  | xor_expr '^' and_expr
+  ;
+
+and_expr
+  : shift_expr 
+  | and_expr '&' shift_expr
+  ;
+
+shift_expr
+  : arith_expr 
+  | shift_expr LEFT_OP arith_expr
+  | shift_expr RIGHT_OP arith_expr
+  ;
+
+arith_expr
+  : term 
+  | arith_expr '+' term
+  | arith_expr '-' term
+  ;
+
+term
+  : factor 
+  | term '*' factor
+  | term '@' factor
+  | term '/' factor
+  | term '%' factor
+  | term FLOORDIV factor
+  ;
+
+factor
+  : '+' factor
+  | '-' factor
+  | '~' factor 
+  | power
+  ;
+
+power
+  : atom_expr 
+  | power POW factor
+  ;
+
+opt_await
+  : /* empty */
+  | AWAIT
+  ;
+
+atom_expr
+  : opt_await atom trailers
+  ;
+
+trailers
+  : /* empty */
+  | trailers trailer
+  ;
+
+trailer
+  : '(' arglist ')'
+  | '(' ')' 
+  | '[' subscriptlist ']' 
+  | '.' NAME
+  ;
+
+atom
+  : '(' ')' 
+  | '(' yield_expr ')' 
+  | '(' testlist_comp ')' 
+  | '[' ']'
+  | '[' testlist_comp ']' 
+  | '{' '}'
+  | '{' dictorsetmaker '}' 
+  | NAME 
+  | NUMBER 
+  | STRING
+  | NONE 
+  | TRUE 
+  | FALSE
+  ;
+
+testlist_comp_1
+  : test 
+  | star_expr
+  ;
+
+testlist_comp_2
+  : comp_for
+  | testlist_comp_2_1
+  ;
+
+testlist_comp_2_1
+  : ',' test
+  | ',' star_expr
+  | testlist_comp_2_1 ',' test
+  | testlist_comp_2_1 ',' star_expr
+  ;
+
+testlist_comp
+  : testlist_comp_1 testlist_comp_2 opt_comma
+  ;
+
+subscriptlist
+  : subscript 
+  | subscriptlist ',' subscript opt_comma
+
+opt_comma 
+  : /* empty */
+  | ','
+  ;
+
+subscript
+  : test 
+  | opt_test ':' opt_test sliceop
+  ;
+
+opt_test
+  : /* empty */
+  | test
+  ;
+
+sliceop
+  : /* empty */
+  | ':' opt_test
+  ;
+
+exprlist_1
+  : expr 
+  | star_expr
+  | exprlist_1 ',' expr
+  | exprlist_1 ',' star_expr
+  ;
+
+exprlist
+  : exprlist_1 opt_comma
+  ;
+
+testlist
+  : test opt_comma
+  | testlist ',' test opt_comma
+  ;
+
+// dictorsetmaker: ( ((test ':' test | '**' expr)
+//                    (comp_for | (',' (test ':' test | '**' expr))* opt_comma)) |
+//                   ((test | star_expr)
+//                    (comp_for | (',' (test | star_expr))* opt_comma)) )
+
+// pass_stmt: PASS ;
+// break_stmt: BREAK ;
+// continue_stmt: CONTINUE ;
+// return_stmt: 'return' [testlist]
+// yield_stmt: yield_expr
+// raise_stmt: 'raise' [test ['from' test]]
+
+comp_iter
+  : comp_for 
+  | comp_if
+  ;
+
+opt_async
+  : /* empty */
+  | ASYNC
+  ;
+
+opt_comp_iter
+  : /* empty */
+  | comp_iter
+  ;
+
+comp_for
+  : opt_async FOR exprlist IN or_test opt_comp_iter
+  ;
+
+comp_if
+  : IF test_nocond opt_comp_iter
+  ;
+
+yield_expr
+  : /* TODO */
+  ;
+
+dictorsetmaker
+  : /* TODO */
+  ;
+
+arglist
+  : /* TODO */
+  ;
+
+varargslist
+  : /* TODO */
+  ;
 
 %%
 
