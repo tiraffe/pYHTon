@@ -373,18 +373,6 @@ testlist
   | testlist ',' test opt_comma
   ;
 
-// dictorsetmaker: ( ((test ':' test | '**' expr)
-//                    (comp_for | (',' (test ':' test | '**' expr))* opt_comma)) |
-//                   ((test | star_expr)
-//                    (comp_for | (',' (test | star_expr))* opt_comma)) )
-
-// pass_stmt: PASS ;
-// break_stmt: BREAK ;
-// continue_stmt: CONTINUE ;
-// return_stmt: 'return' [testlist]
-// yield_stmt: yield_expr
-// raise_stmt: 'raise' [test ['from' test]]
-
 comp_iter
   : comp_for 
   | comp_if
@@ -409,19 +397,82 @@ comp_if
   ;
 
 yield_expr
-  : /* TODO */
+  : YIELD 
+  | YIELD yield_arg
+  ;
+
+yield_arg
+  : FROM test 
+  | testlist
   ;
 
 dictorsetmaker
-  : /* TODO */
+  : dictormaker 
+  | setmaker
+  ;
+
+dictormaker_start
+  : test ':' test
+  | POW expr
+  ;
+
+dictormaker_end
+  : /* empty */
+  | dictormaker_end ',' dictormaker_start
+  ;
+
+dictormaker
+  : dictormaker_start dictormaker_end opt_comma
+  | dictormaker_start comp_for
+  ;
+
+setmaker_start 
+  : test
+  | star_expr
+  ;
+
+setmaker_end
+  : /* empty */
+  | setmaker_end ',' setmaker_start
+  ;
+
+setmaker
+  : setmaker_start setmaker_end opt_comma
+  | setmaker_start comp_for
+  ;
+
+arguments
+  : argument
+  | arguments ',' argument
   ;
 
 arglist
-  : /* TODO */
+  : arguments opt_comma
   ;
+
+argument
+  : test 
+  | test comp_for
+  | test '=' test 
+  | POW test 
+  | '*' test 
+  ;
+
+/* 
+varargslist
+: vfpdef ['=' test] (',' vfpdef ['=' test])* 
+        [',' ['*' [vfpdef] (',' vfpdef ['=' test])* [',' ['**' vfpdef [',']]] | '**' vfpdef [',']]]
+  | '*' [vfpdef] (',' vfpdef ['=' test])* [',' ['**' vfpdef [',']]]
+  | '**' vfpdef [',']
+  ;
+*/
 
 varargslist
   : /* TODO */
+  ;
+
+vfpdef
+  : NAME 
   ;
 
 %%
